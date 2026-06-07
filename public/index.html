@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+
+    <!-- ESSENCIAL PARA IPHONE E PWA -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#2c3e50">
+
+    <!-- MANIFESTO PWA -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- ÍCONES PARA PWA -->
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+    <title>Festa dos Santos - Mesas e Pedidos</title>
+
+    <style>
+        /* ============================
+           BASE E TIPOGRAFIA
+        ============================ */
+        html { font-size: 18px; }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+            line-height: 1.4;
+        }
+
+        header {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        nav button {
+            margin-right: 5px;
+            padding: 10px 14px;
+            border: none;
+            background: #34495e;
+            color: #ecf0f1;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        nav button.active {
+            background: #e67e22;
+        }
+
+        main {
+            padding: 10px;
+        }
+
+        h2 {
+            margin-top: 10px;
+            font-size: 22px;
+        }
+
+        section {
+            display: none;
+        }
+
+        section.active {
+            display: block;
+        }
+
+        /* ============================
+           CARDS
+        ============================ */
+        .card {
+            background: #fff;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-size: 16px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        textarea {
+            min-height: 100px;
+            font-family: monospace;
+        }
+
+        /* ============================
+           BOTÕES
+        ============================ */
+        button.primary {
+            background: #27ae60;
+            color: #fff;
+            border: none;
+            padding: 12px 16px;
+            margin-top: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        button.danger {
+            background: #c0392b;
+            color: #fff;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button.small {
+            padding: 8px 10px;
+            font-size: 14px;
+            width: auto;
+        }
+
+        /* ============================
+           TABELAS RESPONSIVAS
+        ============================ */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 16px;
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 10px;
+            text-align: left;
+        }
+
+        th {
+            background: #ecf0f1;
+        }
+
+        /* ============================
+           LAYOUT RESPONSIVO
+        ============================ */
+        .flex {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        @media (min-width: 800px) {
+            .flex {
+                flex-direction: row;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<header>
+    <h1>Festa dos Santos</h1>
+    <nav>
+        <button data-section="produtos" class="active">Produtos</button>
+        <button data-section="mesas">Mesas</button>
+        <button data-section="pedidos">Pedidos</button>
+        <button data-section="dashboard">Entregas</button>
+    </nav>
+</header>
+
+<main>
+    <!-- ============================
+         PRODUTOS
+    ============================ -->
+    <section id="produtos" class="active">
+        <h2>Produtos</h2>
+
+        <div class="card">
+            <p>Importar lista de produtos em JSON:</p>
+            <textarea id="produtosJson" placeholder='[{"id":1,"nome":"Bifana","preco":4.0}]'></textarea>
+            <button class="primary" id="btnImportarProdutos">Importar produtos</button>
+        </div>
+
+        <div class="card">
+            <h3>Gerir produtos</h3>
+
+            <label>ID</label>
+            <input id="prodId" type="number">
+
+            <label>Nome</label>
+            <input id="prodNome" type="text">
+
+            <label>Preço (€)</label>
+            <input id="prodPreco" type="number" step="0.01">
+
+            <button class="primary" onclick="salvarProduto()">Salvar produto</button>
+            <button class="danger" onclick="excluirProduto()">Excluir produto</button>
+        </div>
+
+        <div class="card">
+            <h3>Lista de produtos</h3>
+            <table id="tabelaProdutos">
+                <thead>
+                <tr><th>ID</th><th>Nome</th><th>Preço (€)</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ============================
+         MESAS
+    ============================ -->
+    <section id="mesas">
+        <h2>Mesas</h2>
+
+        <div class="card flex">
+            <div>
+                <h3>Abrir mesa</h3>
+
+                <label>Número</label>
+                <input id="mesaNumero" type="text">
+
+                <label>Nome</label>
+                <input id="mesaNome" type="text">
+
+                <button class="primary" id="btnAbrirMesa">Abrir mesa</button>
+            </div>
+
+            <div>
+                <h3>Mesas abertas</h3>
+                <table id="tabelaMesas">
+                    <thead>
+                    <tr>
+                        <th>Mesa</th>
+                        <th>Nome</th>
+                        <th>Aberta</th>
+                        <th>Total (€)</th>
+                        <th>Ações</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================
+         PEDIDOS
+    ============================ -->
+    <section id="pedidos">
+        <h2>Pedidos</h2>
+
+        <div class="card flex">
+            <div>
+                <h3>Novo pedido</h3>
+
+                <label>Mesa</label>
+                <select id="pedidoMesa"></select>
+
+                <label>Produto</label>
+                <select id="pedidoProduto"></select>
+
+                <label>Quantidade</label>
+                <input id="pedidoQuantidade" type="number" min="1" value="1">
+
+                <button class="primary" id="btnAdicionarItemPedido">Adicionar item</button>
+
+                <h4>Itens do pedido atual</h4>
+                <table id="tabelaItensPedidoAtual">
+                    <thead><tr><th>Produto</th><th>Qtd</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+
+                <button class="primary" id="btnGravarPedido">Gravar pedido</button>
+            </div>
+
+            <div>
+                <h3>Pedidos da mesa</h3>
+                <table id="tabelaPedidosMesa">
+                    <thead><tr><th>ID</th><th>Hora</th><th>Itens</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+    <!-- ============================
+         DASHBOARD
+    ============================ -->
+    <section id="dashboard">
+        <h2>Entregas pendentes</h2>
+
+        <div class="card">
+            <table id="tabelaPendentes">
+                <thead>
+                <tr>
+                    <th>Hora</th>
+                    <th>Mesa</th>
+                    <th>Nome</th>
+                    <th>Produto</th>
+                    <th>Qtd</th>
+                    <th>Ação</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<!-- ============================
+     JAVASCRIPT
+============================ -->
+<script>
+    const STORAGE_KEYS = {
+        PRODUTOS: 'festa_produtos',
+        MESAS: 'festa_mesas',
+        PEDIDOS: 'festa_pedidos'
+    };
+
+    let produtos = [];
+    let mesas = [];
+    let pedidos = [];
+    let itensPedidoAtual = [];
+
+    function loadFromStorage() {
+        produtos = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUTOS) || '[]');
+        mesas = JSON.parse(localStorage.getItem(STORAGE_KEYS.MESAS) || '[]');
+        pedidos = JSON.parse(localStorage.getItem(STORAGE_KEYS.PEDIDOS) || '[]');
+    }
+
+    function saveToStorage() {
+        localStorage.setItem(STORAGE_KEYS.PRODUTOS, JSON.stringify(produtos));
+        localStorage.setItem(STORAGE_KEYS.MESAS, JSON.stringify(mesas));
+        localStorage.setItem(STORAGE_KEYS.PEDIDOS, JSON.stringify(pedidos));
+    }
+
+    function formatDateTime(iso) {
+        const d = new Date(iso);
+        return d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function gerarIdPedido() {
+        return "P" + String(pedidos.length + 1).padStart(3, "0");
+    }
+
+    /* ============================
+       PRODUTOS
+    ============================ */
+    function ordenarProdutos() {
+        produtos.sort((a, b) => a.nome.localeCompare(b.nome));
+    }
+
+    function renderProdutos() {
+        ordenarProdutos();
+        const tbody = document.querySelector('#tabelaProdutos tbody');
+        tbody.innerHTML = '';
+
+        produtos.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = "pointer";
+            tr.innerHTML = `
+          <td>${p.id}</td>
+          <td>${p.nome}</td>
+          <td>${p.preco.toFixed(2)}</td>
+        `;
+            tr.onclick = () => {
+                document.getElementById('prodId').value = p.id;
+                document.getElementById('prodNome').value = p.nome;
+                document.getElementById('prodPreco').value = p.preco;
+            };
+            tbody.appendChild(tr);
+        });
+
+        const sel = document.getElementById('pedidoProduto');
+        sel.innerHTML = '';
+        produtos.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.nome} (€${p.preco.toFixed(2)})`;
+            sel.appendChild(opt);
+        });
+    }
+
+    function salvarProduto() {
+        const id = Number(document.getElementById('prodId').value);
+        const nome = document.getElementById('prodNome').value.trim();
+        const preco = Number(document.getElementById('prodPreco').value);
+
+        if (!id || !nome || !preco) {
+            alert("Preencha ID, nome e preço.");
+            return;
+        }
+
+        const existente = produtos.find(p => p.id === id);
+
+        if (existente) {
+            existente.nome = nome;
+            existente.preco = preco;
+        } else {
+            produtos.push({ id, nome, preco });
+        }
+
+        saveToStorage();
+        renderProdutos();
+        alert("Produto salvo.");
+    }
+
+    function excluirProduto() {
+        const id = Number(document.getElementById('prodId').value);
+        if (!id) {
+            alert("Informe o ID.");
+            return;
+        }
+
+        if (!confirm("Excluir produto?")) return;
+
+        produtos = produtos.filter(p => p.id !== id);
+        saveToStorage();
+        renderProdutos();
+
+        document.getElementById('prodId').value = "";
+        document.getElementById('prodNome').value = "";
+        document.getElementById('prodPreco').value = "";
+    }
+
+    /* ============================
+       MESAS
+    ============================ */
+    function calcularTotalMesa(mesaId) {
+        let total = 0;
+        pedidos.filter(p => p.mesaId === mesaId).forEach(p => {
+            p.itens.forEach(it => {
+                const prod = produtos.find(pr => pr.id === it.produtoId);
+                if (prod) total += prod.preco * it.quantidade;
+            });
+        });
+        return total;
+    }
+
+    function renderMesas() {
+        const tbody = document.querySelector('#tabelaMesas tbody');
+        tbody.innerHTML = '';
+
+        mesas.forEach(m => {
+            const total = calcularTotalMesa(m.id);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+          <td>${m.id}</td>
+          <td>${m.nome}</td>
+          <td>${formatDateTime(m.abertaEm)}</td>
+          <td>${total.toFixed(2)}</td>
+          <td>
+            <button class="small" onclick="selecionarMesaParaPedidos('${m.id}')">Ver</button>
+            <button class="danger small" onclick="fecharContaMesa('${m.id}')">Fechar</button>
+          </td>
+        `;
+            tbody.appendChild(tr);
+        });
+
+        const sel = document.getElementById('pedidoMesa');
+        sel.innerHTML = '';
+        mesas.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = `${m.id} - ${m.nome}`;
+            sel.appendChild(opt);
+        });
+
+        atualizarPedidosMesaSelecionada();
+    }
+
+    function abrirMesa() {
+        const id = document.getElementById('mesaNumero').value.trim();
+        const nome = document.getElementById('mesaNome').value.trim();
+
+        if (!id) {
+            alert("Informe o número.");
+            return;
+        }
+
+        if (mesas.some(m => m.id === id)) {
+            alert("Mesa já existe.");
+            return;
+        }
+
+        mesas.push({
+            id,
+            nome: nome || "Mesa " + id,
+            abertaEm: new Date().toISOString()
+        });
+
+        saveToStorage();
+        renderMesas();
+
+        document.getElementById('mesaNumero').value = "";
+        document.getElementById('mesaNome').value = "";
+    }
+
+    function selecionarMesaParaPedidos(id) {
+        document.getElementById('pedidoMesa').value = id;
+        atualizarPedidosMesaSelecionada();
+        ativarSecao('pedidos');
+    }
+
+    /* ============================
+       PEDIDOS
+    ============================ */
+    function renderItensPedidoAtual() {
+        const tbody = document.querySelector('#tabelaItensPedidoAtual tbody');
+        tbody.innerHTML = '';
+
+        itensPedidoAtual.forEach(it => {
+            const prod = produtos.find(p => p.id === it.produtoId);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${prod ? prod.nome : "?"}</td><td>${it.quantidade}</td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function adicionarItemPedidoAtual() {
+        const prodId = Number(document.getElementById('pedidoProduto').value);
+        const qtd = Number(document.getElementById('pedidoQuantidade').value);
+
+        if (!qtd || qtd <= 0) {
+            alert("Quantidade inválida.");
+            return;
+        }
+
+        itensPedidoAtual.push({ produtoId: prodId, quantidade: qtd });
+        renderItensPedidoAtual();
+        document.getElementById('pedidoQuantidade').value = 1;
+    }
+
+    function gravarPedido() {
+        const mesaId = document.getElementById('pedidoMesa').value;
+
+        if (!mesaId) {
+            alert("Selecione uma mesa.");
+            return;
+        }
+
+        if (itensPedidoAtual.length === 0) {
+            alert("Adicione itens.");
+            return;
+        }
+
+        pedidos.push({
+            id: gerarIdPedido(),
+            mesaId,
+            hora: new Date().toISOString(),
+            itens: itensPedidoAtual.map(i => ({ ...i, entregue: false }))
+        });
+
+        itensPedidoAtual = [];
+        saveToStorage();
+        renderItensPedidoAtual();
+        atualizarPedidosMesaSelecionada();
+        renderDashboardPendentes();
+
+        alert("Pedido gravado.");
+    }
+
+    function atualizarPedidosMesaSelecionada() {
+        const mesaId = document.getElementById('pedidoMesa').value;
+        const tbody = document.querySelector('#tabelaPedidosMesa tbody');
+        tbody.innerHTML = '';
+
+        const lista = pedidos.filter(p => p.mesaId === mesaId);
+
+        lista.forEach(p => {
+            const totalItens = p.itens.reduce((s, it) => s + it.quantidade, 0);
+
+            const tr = document.createElement('tr');
+            tr.style.cursor = "pointer";
+            tr.innerHTML = `
+          <td>${p.id}</td>
+          <td>${formatDateTime(p.hora)}</td>
+          <td>${totalItens}</td>
+        `;
+
+            const detalhes = document.createElement('tr');
+            detalhes.style.display = "none";
+            detalhes.innerHTML = `
+          <td colspan="3">
+            ${p.itens.map(it => {
+                const prod = produtos.find(pr => pr.id === it.produtoId);
+                return `${prod ? prod.nome : "?"} — ${it.quantidade}`;
+            }).join("<br>")}
+          </td>
+        `;
+
+            tr.onclick = () => {
+                detalhes.style.display = detalhes.style.display === "none" ? "table-row" : "none";
+            };
+
+            tbody.appendChild(tr);
+            tbody.appendChild(detalhes);
+        });
+    }
+
+    /* ============================
+       DASHBOARD
+    ============================ */
+    function renderDashboardPendentes() {
+        const tbody = document.querySelector('#tabelaPendentes tbody');
+        tbody.innerHTML = '';
+
+        const pendentes = [];
+
+        pedidos.forEach(p => {
+            p.itens.forEach((it, idx) => {
+                if (!it.entregue) {
+                    const mesa = mesas.find(m => m.id === p.mesaId);
+                    const prod = produtos.find(pr => pr.id === it.produtoId);
+
+                    pendentes.push({
+                        pedidoId: p.id,
+                        itemIndex: idx,
+                        hora: p.hora,
+                        mesaId: p.mesaId,
+                        mesaNome: mesa ? mesa.nome : "",
+                        produtoNome: prod ? prod.nome : "",
+                        quantidade: it.quantidade
+                    });
+                }
+            });
+        });
+
+        pendentes.sort((a, b) => new Date(a.hora) - new Date(b.hora));
+
+        pendentes.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+          <td>${formatDateTime(p.hora)}</td>
+          <td>${p.mesaId}</td>
+          <td>${p.mesaNome}</td>
+          <td>${p.produtoNome}</td>
+          <td>${p.quantidade}</td>
+          <td><button class="primary small" onclick="marcarItemEntregue('${p.pedidoId}', ${p.itemIndex})">Entregue</button></td>
+        `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function marcarItemEntregue(pedidoId, itemIndex) {
+        const pedido = pedidos.find(p => p.id === pedidoId);
+        if (!pedido) return;
+        if (!pedido.itens[itemIndex]) return;
+        pedido.itens[itemIndex].entregue = true;
+        saveToStorage();
+        renderDashboardPendentes();
+    }
+
+    /* ============================
+       FECHAR CONTA
+    ============================ */
+    function fecharContaMesa(mesaId) {
+        const mesa = mesas.find(m => m.id === mesaId);
+        const nomeMesa = mesa ? mesa.nome : mesaId;
+
+        const pedidosMesa = pedidos.filter(p => p.mesaId === mesaId);
+        const resumo = {};
+
+        pedidosMesa.forEach(p => {
+            p.itens.forEach(it => {
+                const prod = produtos.find(pr => pr.id === it.produtoId);
+                if (!prod) return;
+
+                if (!resumo[it.produtoId]) {
+                    resumo[it.produtoId] = {
+                        nome: prod.nome,
+                        preco: prod.preco,
+                        quantidade: 0
+                    };
+                }
+
+                resumo[it.produtoId].quantidade += it.quantidade;
+            });
+        });
+
+        const listaResumo = Object.values(resumo).sort((a, b) => a.nome.localeCompare(b.nome));
+
+        let texto = `Conta da Mesa ${mesaId} (${nomeMesa})\n\n`;
+        let total = 0;
+
+        listaResumo.forEach(r => {
+            const subtotal = r.quantidade * r.preco;
+            total += subtotal;
+            texto += `${r.nome} (${r.quantidade} × €${r.preco.toFixed(2)}) = €${subtotal.toFixed(2)}\n`;
+        });
+
+        texto += `\nTOTAL A PAGAR: €${total.toFixed(2)}`;
+
+        if (!confirm(texto + "\n\nConfirmar fechamento da conta?")) return;
+
+        mesas = mesas.filter(m => m.id !== mesaId);
+        pedidos = pedidos.filter(p => p.mesaId !== mesaId);
+
+        saveToStorage();
+        renderMesas();
+        renderDashboardPendentes();
+    }
+
+    /* ============================
+       NAVEGAÇÃO
+    ============================ */
+    function ativarSecao(id) {
+        document.querySelectorAll('main section').forEach(sec => {
+            sec.classList.toggle('active', sec.id === id);
+        });
+
+        document.querySelectorAll('header nav button').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.section === id);
+        });
+    }
+
+    /* ============================
+       IMPORTAR PRODUTOS
+    ============================ */
+    function importarProdutos() {
+        const txt = document.getElementById('produtosJson').value.trim();
+        if (!txt) {
+            alert("Cole o JSON de produtos.");
+            return;
+        }
+
+        try {
+            const arr = JSON.parse(txt);
+            if (!Array.isArray(arr)) throw new Error("JSON deve ser um array");
+
+            produtos = arr.map(p => ({
+                id: p.id,
+                nome: p.nome,
+                preco: Number(p.preco)
+            }));
+
+            saveToStorage();
+            renderProdutos();
+            alert("Produtos importados.");
+        } catch (e) {
+            alert("JSON inválido: " + e.message);
+        }
+    }
+
+    /* ============================
+       INIT
+    ============================ */
+    function init() {
+        loadFromStorage();
+        renderProdutos();
+        renderMesas();
+        renderDashboardPendentes();
+
+        document.querySelectorAll('header nav button').forEach(btn => {
+            btn.addEventListener('click', () => ativarSecao(btn.dataset.section));
+        });
+
+        document.getElementById('btnImportarProdutos').addEventListener('click', importarProdutos);
+        document.getElementById('btnAbrirMesa').addEventListener('click', abrirMesa);
+        document.getElementById('btnAdicionarItemPedido').addEventListener('click', adicionarItemPedidoAtual);
+        document.getElementById('btnGravarPedido').addEventListener('click', gravarPedido);
+        document.getElementById('pedidoMesa').addEventListener('change', atualizarPedidosMesaSelecionada);
+    }
+
+    window.addEventListener('load', init);
+
+    // Expor funções globais
+    window.salvarProduto = salvarProduto;
+    window.excluirProduto = excluirProduto;
+    window.selecionarMesaParaPedidos = selecionarMesaParaPedidos;
+    window.fecharContaMesa = fecharContaMesa;
+    window.marcarItemEntregue = marcarItemEntregue;
+
+    /* ============================
+       SERVICE WORKER (PWA)
+    ============================ */
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("service-worker.js");
+    }
+</script>
+</body>
+</html>
