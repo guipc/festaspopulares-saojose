@@ -286,11 +286,14 @@
                 <label>Quantidade</label>
                 <input id="pedidoQuantidade" type="number" min="1" value="1">
 
+                <label>Detalhes (opcional)</label>
+                <input id="pedidoDetalhes" type="text" placeholder="Ex: Sem cebola, gelo, etc.">
+
                 <button class="primary" id="btnAdicionarItemPedido">Adicionar item</button>
 
                 <h4>Itens do pedido atual</h4>
                 <table id="tabelaItensPedidoAtual">
-                    <thead><tr><th>Produto</th><th>Qtd</th></tr></thead>
+                    <thead><tr><th>Produto</th><th>Qtd</th><th>Detalhes</th></tr></thead>
                     <tbody></tbody>
                 </table>
 
@@ -544,7 +547,7 @@
         itensPedidoAtual.forEach(it => {
             const prod = produtos.find(p => p.id === it.produtoId);
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${prod ? prod.nome : "?"}</td><td>${it.quantidade}</td>`;
+            tr.innerHTML = `<td>${prod ? prod.nome : "?"}</td><td>${it.quantidade}</td><td>${it.detalhes || ""}</td>`;
             tbody.appendChild(tr);
         });
     }
@@ -552,15 +555,17 @@
     function adicionarItemPedidoAtual() {
         const prodId = Number(document.getElementById('pedidoProduto').value);
         const qtd = Number(document.getElementById('pedidoQuantidade').value);
+        const detalhes = document.getElementById('pedidoDetalhes').value;
 
         if (!qtd || qtd <= 0) {
             alert("Quantidade inválida.");
             return;
         }
 
-        itensPedidoAtual.push({ produtoId: prodId, quantidade: qtd });
+        itensPedidoAtual.push({ produtoId: prodId, quantidade: qtd, detalhes: detalhes });
         renderItensPedidoAtual();
         document.getElementById('pedidoQuantidade').value = 1;
+        document.getElementById('pedidoDetalhes').value = "";
     }
 
     function gravarPedido() {
@@ -617,7 +622,8 @@
           <td colspan="3">
             ${p.itens.map(it => {
                 const prod = produtos.find(pr => pr.id === it.produtoId);
-                return `${prod ? prod.nome : "?"} — ${it.quantidade}`;
+                const desc = it.detalhes ? ` (${it.detalhes})` : "";
+                return `${prod ? prod.nome : "?"} — ${it.quantidade}${desc}`;
             }).join("<br>")}
           </td>
         `;
@@ -653,7 +659,8 @@
                         mesaId: p.mesaId,
                         mesaNome: mesa ? mesa.nome : "",
                         produtoNome: prod ? prod.nome : "",
-                        quantidade: it.quantidade
+                        quantidade: it.quantidade,
+                        detalhes: it.detalhes || ""
                     });
                 }
             });
@@ -667,7 +674,7 @@
           <td>${formatDateTime(p.hora)}</td>
           <td>${p.mesaId}</td>
           <td>${p.mesaNome}</td>
-          <td>${p.produtoNome}</td>
+          <td>${p.produtoNome} ${p.detalhes ? `<br><small>(${p.detalhes})</small>` : ""}</td>
           <td>${p.quantidade}</td>
           <td><button class="primary small" onclick="marcarItemEntregue(${p.pedidoId}, ${p.itemIndex})">Entregue</button></td>
         `;
