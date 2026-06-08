@@ -177,6 +177,28 @@
                 flex-direction: row;
             }
         }
+        /* Estilo para ajuste de quantidade */
+        .qtd-ajuste {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .qtd-ajuste button {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background: #eee;
+            border-radius: 4px;
+        }
+        .qtd-ajuste span {
+            min-width: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
     </style>
 </head>
 
@@ -604,12 +626,30 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${prod ? prod.nome : "?"}</td>
-                <td>${it.quantidade}</td>
+                <td>
+                    <div class="qtd-ajuste">
+                        <button onclick="alterarQuantidadeItemPedidoAtual(${idx}, -1)">-</button>
+                        <span>${it.quantidade}</span>
+                        <button onclick="alterarQuantidadeItemPedidoAtual(${idx}, 1)">+</button>
+                    </div>
+                </td>
                 <td>${it.detalhes || ""}</td>
                 <td><button class="danger small" onclick="removerItemPedidoAtual(${idx})">Remover</button></td>
             `;
             tbody.appendChild(tr);
         });
+    }
+
+    function alterarQuantidadeItemPedidoAtual(index, delta) {
+        const item = itensPedidoAtual[index];
+        if (!item) return;
+        const novaQtd = item.quantidade + delta;
+        if (novaQtd <= 0) {
+            removerItemPedidoAtual(index);
+        } else {
+            item.quantidade = novaQtd;
+            renderItensPedidoAtual();
+        }
     }
 
     function removerItemPedidoAtual(index) {
@@ -749,7 +789,14 @@
                 const desc = it.detalhes ? ` (${it.detalhes})` : "";
                 const btnCancel = `<button class="danger small" style="margin-left: 10px; padding: 2px 6px;" onclick="cancelarItemPedido(${p.id}, ${idx})">x</button>`;
                 return `<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                            <span>${prod ? prod.nome : "?"} — ${it.quantidade}${desc}</span>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div class="qtd-ajuste">
+                                    <button onclick="alterarQuantidadeItemPedidoSalvo(${p.id}, ${idx}, -1)">-</button>
+                                    <span>${it.quantidade}</span>
+                                    <button onclick="alterarQuantidadeItemPedidoSalvo(${p.id}, ${idx}, 1)">+</button>
+                                </div>
+                                <span>${prod ? prod.nome : "?"}${desc}</span>
+                            </div>
                             ${btnCancel}
                         </div>`;
             }).join("")}
@@ -772,6 +819,24 @@
         atualizarPedidosMesaSelecionada();
         renderDashboardPendentes();
         renderMesas();
+    }
+
+    function alterarQuantidadeItemPedidoSalvo(pedidoId, itemIndex, delta) {
+        const pedido = pedidos.find(p => p.id === pedidoId);
+        if (!pedido || !pedido.itens[itemIndex]) return;
+        
+        const item = pedido.itens[itemIndex];
+        const novaQtd = item.quantidade + delta;
+        
+        if (novaQtd <= 0) {
+            cancelarItemPedido(pedidoId, itemIndex);
+        } else {
+            item.quantidade = novaQtd;
+            saveToStorage();
+            atualizarPedidosMesaSelecionada();
+            renderDashboardPendentes();
+            renderMesas();
+        }
     }
 
     function cancelarItemPedido(pedidoId, itemIndex) {
