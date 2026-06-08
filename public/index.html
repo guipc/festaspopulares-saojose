@@ -207,8 +207,7 @@
         <div class="card">
             <h3>Gerir produtos</h3>
 
-            <label>ID</label>
-            <input id="prodId" type="number">
+            <input id="prodId" type="hidden">
 
             <label>Nome</label>
             <input id="prodNome" type="text">
@@ -365,7 +364,12 @@
     }
 
     function gerarIdPedido() {
-        return "P" + String(pedidos.length + 1).padStart(3, "0");
+        if (!pedidos || pedidos.length === 0) {
+            return 1; // começa no 1
+        }
+
+        const maior = Math.max(...pedidos.map(p => Number(p.id)));
+        return maior + 1;
     }
 
     /* ============================
@@ -406,24 +410,26 @@
         });
     }
 
+    function gerarIdProduto() {
+        if (!produtos || produtos.length === 0) {
+            return 1; // lista vazia → começa no 1
+        }
+
+        const maiorId = Math.max(...produtos.map(p => Number(p.id)));
+        return maiorId + 1;
+    }
+
     function salvarProduto() {
-        const id = Number(document.getElementById('prodId').value);
         const nome = document.getElementById('prodNome').value.trim();
         const preco = Number(document.getElementById('prodPreco').value);
+        if (!nome || !preco) {
 
-        if (!id || !nome || !preco) {
             alert("Preencha ID, nome e preço.");
             return;
         }
 
-        const existente = produtos.find(p => p.id === id);
-
-        if (existente) {
-            existente.nome = nome;
-            existente.preco = preco;
-        } else {
-            produtos.push({ id, nome, preco });
-        }
+        const id = gerarIdProduto();
+        produtos.push({ id, nome, preco });
 
         saveToStorage();
         renderProdutos();
@@ -580,6 +586,7 @@
         itensPedidoAtual = [];
         saveToStorage();
         renderItensPedidoAtual();
+        renderMesas();
         atualizarPedidosMesaSelecionada();
         renderDashboardPendentes();
 
@@ -662,7 +669,7 @@
           <td>${p.mesaNome}</td>
           <td>${p.produtoNome}</td>
           <td>${p.quantidade}</td>
-          <td><button class="primary small" onclick="marcarItemEntregue('${p.pedidoId}', ${p.itemIndex})">Entregue</button></td>
+          <td><button class="primary small" onclick="marcarItemEntregue(${p.pedidoId}, ${p.itemIndex})">Entregue</button></td>
         `;
             tbody.appendChild(tr);
         });
