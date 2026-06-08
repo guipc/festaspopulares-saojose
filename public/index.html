@@ -215,6 +215,16 @@
             <label>Preço (€)</label>
             <input id="prodPreco" type="number" step="0.01">
 
+            <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px;">
+                <input id="prodTemAcompanhamentos" type="checkbox" style="width: auto; margin: 0;"> Possui acompanhamentos
+            </label>
+
+            <div id="areaAcompanhamentos" style="display: none; border: 1px solid #ddd; padding: 10px; border-radius: 4px; margin-top: 10px;">
+                <label>Acompanhamentos (um por linha)</label>
+                <textarea id="prodAcompanhamentos" placeholder="Batata frita&#10;Arroz* (o * indica default)" style="min-height: 80px;"></textarea>
+                <small>Use * no final do nome para marcar como padrão.</small>
+            </div>
+
             <button class="primary" onclick="salvarProduto()">Salvar produto</button>
             <button class="danger" onclick="excluirProduto()">Excluir produto</button>
         </div>
@@ -281,7 +291,12 @@
                 <select id="pedidoMesa"></select>
 
                 <label>Produto</label>
-                <select id="pedidoProduto"></select>
+                <select id="pedidoProduto" onchange="mostrarAcompanhamentosNoPedido()"></select>
+
+                <div id="containerAcompanhamentosPedido" style="margin-top: 10px; display: none; background: #f9f9f9; padding: 10px; border-radius: 4px; border: 1px solid #eee;">
+                    <label>Acompanhamentos:</label>
+                    <div id="listaAcompanhamentosPedido"></div>
+                </div>
 
                 <label>Quantidade</label>
                 <input id="pedidoQuantidade" type="number" min="1" value="1">
@@ -399,6 +414,16 @@
                 document.getElementById('prodId').value = p.id;
                 document.getElementById('prodNome').value = p.nome;
                 document.getElementById('prodPreco').value = p.preco;
+                
+                const cb = document.getElementById('prodTemAcompanhamentos');
+                cb.checked = !!p.temAcompanhamentos;
+                document.getElementById('areaAcompanhamentos').style.display = cb.checked ? 'block' : 'none';
+                
+                if (p.acompanhamentos) {
+                    document.getElementById('prodAcompanhamentos').value = p.acompanhamentos.map(a => a.nome + (a.default ? '*' : '')).join('\n');
+                } else {
+                    document.getElementById('prodAcompanhamentos').value = '';
+                }
             };
             tbody.appendChild(tr);
         });
@@ -423,20 +448,50 @@
     }
 
     function salvarProduto() {
+        const idInput = document.getElementById('prodId').value;
         const nome = document.getElementById('prodNome').value.trim();
         const preco = Number(document.getElementById('prodPreco').value);
-        if (!nome || !preco) {
+        const temAcompanhamentos = document.getElementById('prodTemAcompanhamentos').checked;
+        const acompanhamentosRaw = document.getElementById('prodAcompanhamentos').value.trim();
 
-            alert("Preencha ID, nome e preço.");
+        if (!nome || !preco) {
+            alert("Preencha nome e preço.");
             return;
         }
 
-        const id = gerarIdProduto();
-        produtos.push({ id, nome, preco });
+        let acompanhamentos = [];
+        if (temAcompanhamentos && acompanhamentosRaw) {
+            acompanhamentos = acompanhamentosRaw.split('\n').map(linha => {
+                linha = linha.trim();
+                const isDefault = linha.endsWith('*');
+                return {
+                    nome: isDefault ? linha.slice(0, -1).trim() : linha,
+                    default: isDefault
+                };
+            }).filter(a => a.nome !== "");
+        }
+
+        if (idInput) {
+            const index = produtos.findIndex(p => p.id === Number(idInput));
+            if (index !== -1) {
+                produtos[index] = { ...produtos[index], nome, preco, temAcompanhamentos, acompanhamentos };
+            }
+        } else {
+            const id = gerarIdProduto();
+            produtos.push({ id, nome, preco, temAcompanhamentos, acompanhamentos });
+        }
 
         saveToStorage();
         renderProdutos();
         alert("Produto salvo.");
+        
+        // Limpar campos
+        document.getElementById('prodId').value = "";
+        document.getElementById('prodNome').value = "";
+        document.getElementById('prodPreco').value = "";
+        document.getElementById('prodTemAcompanhamentos').checked = false;
+        document.getElementById('prodAcompanhamentos').value = "";
+        document.getElementById('areaAcompanhamentos').style.display = 'none';
     }
 
     function excluirProduto() {
@@ -552,20 +607,73 @@
         });
     }
 
+    function mostrarAcompanhamentosNoPedido() {
+        const prodId = Number(document.getElementById('pedidoProduto').value);
+        const prod = produtos.find(p => p.id === prodId);
+        const container = document.getElementById('containerAcompanhamentosPedido');
+        const lista = document.getElementById('listaAcompanhamentosPedido');
+        
+        lista.innerHTML = '';
+        
+        if (prod && prod.temAcompanhamentos && prod.acompanhamentos && prod.acompanhamentos.length > 0) {
+            container.style.display = 'block';
+            prod.acompanhamentos.forEach(a => {
+                const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.gap = '8px';
+                label.style.fontWeight = 'normal';
+                
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.value = a.nome;
+                cb.checked = !!a.default;
+                cb.style.width = 'auto';
+                cb.style.margin = '0';
+                cb.className = 'check-acompanhamento';
+                
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(a.nome));
+                lista.appendChild(label);
+            });
+        } else {
+            container.style.display = 'none';
+        }
+    }
+
     function adicionarItemPedidoAtual() {
         const prodId = Number(document.getElementById('pedidoProduto').value);
         const qtd = Number(document.getElementById('pedidoQuantidade').value);
-        const detalhes = document.getElementById('pedidoDetalhes').value;
+        const detalhesLivre = document.getElementById('pedidoDetalhes').value.trim();
 
         if (!qtd || qtd <= 0) {
             alert("Quantidade inválida.");
             return;
         }
 
-        itensPedidoAtual.push({ produtoId: prodId, quantidade: qtd, detalhes: detalhes });
+        const checks = document.querySelectorAll('.check-acompanhamento:checked');
+        const acompanhamentosSelecionados = Array.from(checks).map(c => c.value);
+        
+        let detalhesFinal = "";
+        if (acompanhamentosSelecionados.length > 0) {
+            detalhesFinal = "Acomp: " + acompanhamentosSelecionados.join(", ");
+        }
+        
+        if (detalhesLivre) {
+            detalhesFinal = detalhesFinal ? `${detalhesFinal} | ${detalhesLivre}` : detalhesLivre;
+        }
+
+        itensPedidoAtual.push({ 
+            produtoId: prodId, 
+            quantidade: qtd, 
+            detalhes: detalhesFinal,
+            acompanhamentos: acompanhamentosSelecionados
+        });
+        
         renderItensPedidoAtual();
         document.getElementById('pedidoQuantidade').value = 1;
         document.getElementById('pedidoDetalhes').value = "";
+        mostrarAcompanhamentosNoPedido(); // Reset/re-render para o produto atual
     }
 
     function gravarPedido() {
@@ -800,6 +908,12 @@
         document.getElementById('btnAdicionarItemPedido').addEventListener('click', adicionarItemPedidoAtual);
         document.getElementById('btnGravarPedido').addEventListener('click', gravarPedido);
         document.getElementById('pedidoMesa').addEventListener('change', atualizarPedidosMesaSelecionada);
+
+        document.getElementById('prodTemAcompanhamentos').addEventListener('change', (e) => {
+            document.getElementById('areaAcompanhamentos').style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        mostrarAcompanhamentosNoPedido();
     }
 
     window.addEventListener('load', init);
@@ -810,6 +924,7 @@
     window.selecionarMesaParaPedidos = selecionarMesaParaPedidos;
     window.fecharContaMesa = fecharContaMesa;
     window.marcarItemEntregue = marcarItemEntregue;
+    window.mostrarAcompanhamentosNoPedido = mostrarAcompanhamentosNoPedido;
 
     /* ============================
        SERVICE WORKER (PWA)
