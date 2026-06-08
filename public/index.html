@@ -308,7 +308,7 @@
 
                 <h4>Itens do pedido atual</h4>
                 <table id="tabelaItensPedidoAtual">
-                    <thead><tr><th>Produto</th><th>Qtd</th><th>Detalhes</th></tr></thead>
+                    <thead><tr><th>Produto</th><th>Qtd</th><th>Detalhes</th><th>Ação</th></tr></thead>
                     <tbody></tbody>
                 </table>
 
@@ -318,7 +318,7 @@
             <div>
                 <h3>Pedidos da mesa</h3>
                 <table id="tabelaPedidosMesa">
-                    <thead><tr><th>ID</th><th>Hora</th><th>Itens</th></tr></thead>
+                    <thead><tr><th>ID</th><th>Hora</th><th>Itens</th><th>Ação</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -599,12 +599,22 @@
         const tbody = document.querySelector('#tabelaItensPedidoAtual tbody');
         tbody.innerHTML = '';
 
-        itensPedidoAtual.forEach(it => {
+        itensPedidoAtual.forEach((it, idx) => {
             const prod = produtos.find(p => p.id === it.produtoId);
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${prod ? prod.nome : "?"}</td><td>${it.quantidade}</td><td>${it.detalhes || ""}</td>`;
+            tr.innerHTML = `
+                <td>${prod ? prod.nome : "?"}</td>
+                <td>${it.quantidade}</td>
+                <td>${it.detalhes || ""}</td>
+                <td><button class="danger small" onclick="removerItemPedidoAtual(${idx})">Remover</button></td>
+            `;
             tbody.appendChild(tr);
         });
+    }
+
+    function removerItemPedidoAtual(index) {
+        itensPedidoAtual.splice(index, 1);
+        renderItensPedidoAtual();
     }
 
     function mostrarAcompanhamentosNoPedido() {
@@ -703,6 +713,11 @@
         atualizarPedidosMesaSelecionada();
         renderDashboardPendentes();
 
+        // Limpar campos de entrada
+        document.getElementById('pedidoQuantidade').value = 1;
+        document.getElementById('pedidoDetalhes').value = "";
+        mostrarAcompanhamentosNoPedido();
+
         alert("Pedido gravado.");
     }
 
@@ -722,17 +737,22 @@
           <td>${p.id}</td>
           <td>${formatDateTime(p.hora)}</td>
           <td>${totalItens}</td>
+          <td><button class="danger small" onclick="cancelarPedido(${p.id}); event.stopPropagation();">Cancelar</button></td>
         `;
 
             const detalhes = document.createElement('tr');
             detalhes.style.display = "none";
             detalhes.innerHTML = `
-          <td colspan="3">
-            ${p.itens.map(it => {
+          <td colspan="4">
+            ${p.itens.map((it, idx) => {
                 const prod = produtos.find(pr => pr.id === it.produtoId);
                 const desc = it.detalhes ? ` (${it.detalhes})` : "";
-                return `${prod ? prod.nome : "?"} — ${it.quantidade}${desc}`;
-            }).join("<br>")}
+                const btnCancel = `<button class="danger small" style="margin-left: 10px; padding: 2px 6px;" onclick="cancelarItemPedido(${p.id}, ${idx})">x</button>`;
+                return `<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                            <span>${prod ? prod.nome : "?"} — ${it.quantidade}${desc}</span>
+                            ${btnCancel}
+                        </div>`;
+            }).join("")}
           </td>
         `;
 
@@ -743,6 +763,32 @@
             tbody.appendChild(tr);
             tbody.appendChild(detalhes);
         });
+    }
+
+    function cancelarPedido(pedidoId) {
+        if (!confirm("Deseja realmente cancelar este pedido inteiro?")) return;
+        pedidos = pedidos.filter(p => p.id !== pedidoId);
+        saveToStorage();
+        atualizarPedidosMesaSelecionada();
+        renderDashboardPendentes();
+        renderMesas();
+    }
+
+    function cancelarItemPedido(pedidoId, itemIndex) {
+        if (!confirm("Deseja cancelar este item do pedido?")) return;
+        const pedido = pedidos.find(p => p.id === pedidoId);
+        if (!pedido) return;
+
+        pedido.itens.splice(itemIndex, 1);
+
+        if (pedido.itens.length === 0) {
+            pedidos = pedidos.filter(p => p.id !== pedidoId);
+        }
+
+        saveToStorage();
+        atualizarPedidosMesaSelecionada();
+        renderDashboardPendentes();
+        renderMesas();
     }
 
     /* ============================
