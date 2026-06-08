@@ -1,4 +1,4 @@
-const CACHE_NAME = "festa-cache-v1";
+const CACHE_NAME = "festa-cache-v1.0";
 const FILES_TO_CACHE = [
     "/",
     "/index.html",
