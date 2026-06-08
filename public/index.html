@@ -452,6 +452,7 @@
        MESAS
     ============================ */
     function calcularTotalMesa(mesaId) {
+        console.log(pedidos);
         let total = 0;
         pedidos.filter(p => p.mesaId === mesaId).forEach(p => {
             p.itens.forEach(it => {
@@ -579,7 +580,6 @@
         itensPedidoAtual = [];
         saveToStorage();
         renderItensPedidoAtual();
-        renderMesas();
         atualizarPedidosMesaSelecionada();
         renderDashboardPendentes();
 
