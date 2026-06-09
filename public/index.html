@@ -223,7 +223,10 @@
         <div class="card">
             <p>Importar lista de produtos em JSON:</p>
             <textarea id="produtosJson" placeholder='[{"id":1,"nome":"Bifana","preco":4.0}]'></textarea>
-            <button class="primary" id="btnImportarProdutos">Importar produtos</button>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="primary" id="btnImportarProdutos" style="margin-top: 0;">Importar produtos</button>
+                <button class="primary" id="btnExportarProdutos" style="margin-top: 0; background: #34495e;">Exportar produtos</button>
+            </div>
         </div>
 
         <div class="card">
@@ -989,7 +992,9 @@
             produtos = arr.map(p => ({
                 id: p.id,
                 nome: p.nome,
-                preco: Number(p.preco)
+                preco: Number(p.preco),
+                temAcompanhamentos: !!p.temAcompanhamentos,
+                acompanhamentos: p.acompanhamentos || []
             }));
 
             saveToStorage();
@@ -998,6 +1003,25 @@
         } catch (e) {
             alert("JSON inválido: " + e.message);
         }
+    }
+
+    /* ============================
+       EXPORTAR PRODUTOS
+    ============================ */
+    function exportarProdutos() {
+        if (produtos.length === 0) {
+            alert("Não há produtos para exportar.");
+            return;
+        }
+        const json = JSON.stringify(produtos, null, 2);
+        document.getElementById('produtosJson').value = json;
+        
+        // Opcional: Copiar para o clipboard
+        navigator.clipboard.writeText(json).then(() => {
+            alert("JSON exportado para a caixa de texto e copiado para a área de transferência.");
+        }).catch(() => {
+            alert("JSON exportado para a caixa de texto.");
+        });
     }
 
     /* ============================
@@ -1014,6 +1038,7 @@
         });
 
         document.getElementById('btnImportarProdutos').addEventListener('click', importarProdutos);
+        document.getElementById('btnExportarProdutos').addEventListener('click', exportarProdutos);
         document.getElementById('btnAbrirMesa').addEventListener('click', abrirMesa);
         document.getElementById('btnAdicionarItemPedido').addEventListener('click', adicionarItemPedidoAtual);
         document.getElementById('btnGravarPedido').addEventListener('click', gravarPedido);
